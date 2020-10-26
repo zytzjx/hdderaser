@@ -84,7 +84,7 @@ func RunSecureErase(logpath string, devicename string, label int) {
 	}
 	defer f.Close()
 	tstart := time.Now()
-	f.WriteString(fmt.Sprintf("Start Task local time and date: %s", tstart.Format("Mon Jan _2 15:04:05 2006")))
+	f.WriteString(fmt.Sprintf("Start Task local time and date: %s\n", tstart.Format("Mon Jan _2 15:04:05 2006")))
 	stime := tstart.Format("15:04:05")
 	if IsSSD(devicename) {
 		f.WriteString(fmt.Sprintf("hdparm --user-master u --security-set-pass PASSFD %s\n", devicename))
@@ -97,15 +97,15 @@ func RunSecureErase(logpath string, devicename string, label int) {
 		send := fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 		//   1      1 0x00   6.737%   6.737% 00:02:30 00:02:30 17:00:51 00002226   134.73   134.73
 		f.WriteString(fmt.Sprintf("   1      1 0x00 100.000%% 100.000%% %s %s %s 00000000     0.00     0.00\n", send, send, stime))
-		f.WriteString(fmt.Sprintf("end Task local time and date: %s", time.Now().Format("Mon Jan _2 15:04:05 2006")))
+		f.WriteString(fmt.Sprintf("end Task local time and date: %s\n", time.Now().Format("Mon Jan _2 15:04:05 2006")))
 		f.WriteString(fmt.Sprintf("WipeExitCode=%d\n", 0))
 	} else {
 		f.WriteString(fmt.Sprintf("hdparm --yes-i-know-what-i-am-doing --sanitize-crypto-scramble %s\n", devicename))
 		exec.Command("hdparm", "--yes-i-know-what-i-am-doing", "--sanitize-crypto-scramble", devicename).Output()
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 		f.WriteString(fmt.Sprintf("hdparm --sanitize-status %s\n", devicename))
 		exec.Command("hdparm", "--sanitize-status", devicename).Output()
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 		exec.Command("hdparm", "--sanitize-status", devicename).Output()
 
 		tend := (int64)(time.Now().Sub(tstart).Seconds())
@@ -114,7 +114,7 @@ func RunSecureErase(logpath string, devicename string, label int) {
 		send := fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 		//   1      1 0x00   6.737%   6.737% 00:02:30 00:02:30 17:00:51 00002226   134.73   134.73
 		f.WriteString(fmt.Sprintf("   1      1 0x00 100.000%% 100.000%% %s %s %s 00000000     0.00     0.00\n", send, send, stime))
-		f.WriteString(fmt.Sprintf("end Task local time and date: %s", time.Now().Format("Mon Jan _2 15:04:05 2006")))
+		f.WriteString(fmt.Sprintf("end Task local time and date: %s\n", time.Now().Format("Mon Jan _2 15:04:05 2006")))
 		f.WriteString(fmt.Sprintf("WipeExitCode=%d\n", 0))
 	}
 }
