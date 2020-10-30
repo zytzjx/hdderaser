@@ -88,14 +88,15 @@ func RunSecureErase(logpath string, devicename string, label int) {
 	f.WriteString(fmt.Sprintf("Start Task local time and date: %s\n", tstart.Format("Mon Jan _2 15:04:05 2006")))
 	stime := tstart.Format("15:04:05")
 	funReadData := func() (string, error) {
-		f, err := os.Open(devicename)
+		// if sector size is 520, this code is not working.Must use sglib. but not find go sglib.
+		f, err := syscall.Open(devicename, syscall.O_RDONLY, 0777)
 		if err != nil {
 			log.Fatal(err)
 			return "", err
 		}
-		defer f.Close()
+		defer syscall.Close(f)
 		b1 := make([]byte, 512)
-		_, err = f.Read(b1)
+		_, err = syscall.Read(f, b1)
 		if err != nil {
 			return "", err
 		}
