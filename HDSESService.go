@@ -2,6 +2,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"fmt"
 	"net/http"
 
@@ -86,6 +87,31 @@ func RunSecureErase(logpath string, devicename string, label int) {
 	tstart := time.Now()
 	f.WriteString(fmt.Sprintf("Start Task local time and date: %s\n", tstart.Format("Mon Jan _2 15:04:05 2006")))
 	stime := tstart.Format("15:04:05")
+	funReadData := func() (string, error) {
+		f, err := os.Open(devicename)
+		if err != nil {
+			log.Fatal(err)
+			return "", err
+		}
+		defer f.Close()
+		b1 := make([]byte, 512)
+		_, err = f.Read(b1)
+		if err != nil {
+			return "", err
+		}
+		md5 := md5.Sum(b1)
+		ss := fmt.Sprintf("%x", md5)
+		return ss, nil
+	}
+
+	var errorcode int
+	smd5, err := funReadData()
+	if err != nil {
+		errorcode = 10
+	}
+
+	bverify := false
+
 	if IsSSD(devicename) {
 		f.WriteString(fmt.Sprintf("hdparm --user-master u --security-set-pass PASSFD %s\n", devicename))
 		exec.Command("hdparm", "--user-master", "u", "--security-set-pass", "PASSFD", devicename).Output()
@@ -96,9 +122,18 @@ func RunSecureErase(logpath string, devicename string, label int) {
 		minutes, seconds := divmod(remainder, 60)
 		send := fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 		//   1      1 0x00   6.737%   6.737% 00:02:30 00:02:30 17:00:51 00002226   134.73   134.73
-		f.WriteString(fmt.Sprintf("   1      1 0x00 100.000%% 100.000%% %s %s %s 00000000     0.00     0.00\n", send, send, stime))
+		f.WriteString(fmt.Sprintf("   1      1 0x00 100.000%% 100.000%% %s %s %s %08d     0.00     0.00\n", send, send, stime, tend))
 		f.WriteString(fmt.Sprintf("end Task local time and date: %s\n", time.Now().Format("Mon Jan _2 15:04:05 2006")))
-		f.WriteString(fmt.Sprintf("WipeExitCode=%d\n", 0))
+		//f.WriteString(fmt.Sprintf("WipeExitCode=%d\n", 0))
+
+		smd51, err := funReadData()
+		if err != nil {
+			errorcode = 10
+		}
+		if errorcode == 0 {
+			bverify = smd51 == smd5
+		}
+
 	} else {
 		f.WriteString(fmt.Sprintf("hdparm --yes-i-know-what-i-am-doing --sanitize-crypto-scramble %s\n", devicename))
 		exec.Command("hdparm", "--yes-i-know-what-i-am-doing", "--sanitize-crypto-scramble", devicename).Output()
@@ -113,9 +148,23 @@ func RunSecureErase(logpath string, devicename string, label int) {
 		minutes, seconds := divmod(remainder, 60)
 		send := fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 		//   1      1 0x00   6.737%   6.737% 00:02:30 00:02:30 17:00:51 00002226   134.73   134.73
-		f.WriteString(fmt.Sprintf("   1      1 0x00 100.000%% 100.000%% %s %s %s 00000000     0.00     0.00\n", send, send, stime))
+		f.WriteString(fmt.Sprintf("   1      1 0x00 100.000%% 100.000%% %s %s %s %08d     0.00     0.00\n", send, send, stime, tend))
 		f.WriteString(fmt.Sprintf("end Task local time and date: %s\n", time.Now().Format("Mon Jan _2 15:04:05 2006")))
+		//f.WriteString(fmt.Sprintf("WipeExitCode=%d\n", 0))
+
+		smd51, err := funReadData()
+		if err != nil {
+			errorcode = 10
+		}
+		if errorcode == 0 {
+			bverify = smd51 != smd5
+		}
+	}
+
+	if bverify && errorcode == 0 {
 		f.WriteString(fmt.Sprintf("WipeExitCode=%d\n", 0))
+	} else {
+		f.WriteString(fmt.Sprintf("WipeExitCode=%d\n", errorcode))
 	}
 }
 
